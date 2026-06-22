@@ -1,0 +1,105 @@
+generator client {
+  provider = "prisma-client-js"
+  output   = "../src/generated/football-sqlite-client"
+}
+
+datasource db {
+  provider = "sqlite"
+  url      = env("FOOTBALL_DATABASE_URL")
+}
+
+model AlgorithmConfig {
+  id        String   @id @default("default")
+  rulesJson String   @map("rules_json")
+  updatedAt DateTime @updatedAt @map("updated_at")
+
+  @@map("algorithm_config")
+}
+
+model AlgorithmConfigHistory {
+  id           String   @id @default(cuid())
+  rulesJson    String   @map("rules_json")
+  description  String?
+  replacedAt   DateTime @default(now()) @map("replaced_at")
+
+  @@index([replacedAt])
+  @@map("algorithm_config_history")
+}
+
+model FootballFixture {
+  id                 String   @id
+  fixtureDate        DateTime @map("fixture_date")
+  kickoffTime        DateTime @map("kickoff_time")
+  competition        String?
+  country            String?
+  homeTeam           String   @map("home_team")
+  awayTeam           String   @map("away_team")
+  status             String   @default("scheduled")
+  qualifying         Boolean  @default(false)
+  edgePickSelection  String?  @map("edge_pick_selection")
+  betfairMarketId    String?  @map("betfair_market_id")
+  marketTotalMatched Decimal? @map("market_total_matched")
+  scrapedAt          DateTime? @map("scraped_at")
+  createdAt          DateTime @default(now()) @map("created_at")
+
+  selections     FootballSelection[]
+  liveOdds       FootballLiveOdds[]
+  qualifyingBets FootballQualifyingBet[]
+
+  @@index([fixtureDate], map: "idx_football_fixtures_date")
+  @@map("football_fixtures")
+}
+
+model FootballSelection {
+  id                 Int      @id @default(autoincrement())
+  fixtureId          String   @map("fixture_id")
+  betfairSelectionId Int?     @map("betfair_selection_id")
+  name               String
+  role               String?
+  sortOrder          Int      @default(0) @map("sort_order")
+  qualifies          Boolean  @default(false)
+  disqualifyReason   String?  @map("disqualify_reason")
+  result             String?
+  createdAt          DateTime @default(now()) @map("created_at")
+
+  fixture FootballFixture @relation(fields: [fixtureId], references: [id], onDelete: Cascade)
+
+  @@index([fixtureId], map: "idx_football_selections_fixture")
+  @@map("football_selections")
+}
+
+model FootballLiveOdds {
+  id            Int      @id @default(autoincrement())
+  fixtureId     String   @map("fixture_id")
+  selectionName String?  @map("selection_name")
+  betfairPrice  Decimal? @map("betfair_price")
+  layPrice      Decimal? @map("lay_price")
+  backSize      Decimal? @map("back_size")
+  laySize       Decimal? @map("lay_size")
+  matchedVolume Decimal? @map("matched_volume")
+  fetchedAt     DateTime @default(now()) @map("fetched_at")
+
+  fixture FootballFixture @relation(fields: [fixtureId], references: [id], onDelete: Cascade)
+
+  @@map("football_live_odds")
+}
+
+model FootballQualifyingBet {
+  id            Int      @id @default(autoincrement())
+  fixtureId     String   @map("fixture_id")
+  selectionName String   @map("selection_name")
+  kickoffTime   DateTime @map("kickoff_time")
+  competition   String?
+  homeTeam      String   @map("home_team")
+  awayTeam      String   @map("away_team")
+  edgePrice     Decimal? @map("edge_price")
+  stake         Decimal?
+  status        String   @default("pending")
+  pnl           Decimal?
+  createdAt     DateTime @default(now()) @map("created_at")
+
+  fixture FootballFixture @relation(fields: [fixtureId], references: [id], onDelete: Cascade)
+
+  @@index([kickoffTime], map: "idx_football_qualifying_bets_kickoff")
+  @@map("football_qualifying_bets")
+}

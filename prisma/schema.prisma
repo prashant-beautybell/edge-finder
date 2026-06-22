@@ -1,0 +1,187 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider  = "postgresql"
+  url       = env("DATABASE_URL")
+  directUrl = env("DIRECT_URL")
+}
+
+model Race {
+  id             String   @id
+  raceDate       DateTime @map("race_date")
+  course         String
+  raceTime       DateTime @map("race_time")
+  raceName       String?  @map("race_name")
+  raceType       String?  @map("race_type")
+  distanceYards  Int?     @map("distance_yards")
+  distanceBand   String?  @map("distance_band")
+  going          String?
+  fieldSize      Int?     @map("field_size")
+  isHandicap     Boolean  @default(false) @map("is_handicap")
+  isTurf         Boolean  @default(false) @map("is_turf")
+  qualifying     Boolean  @default(false)
+  raceUrl        String?  @map("race_url")
+  resultUrl      String?  @map("result_url")
+  betfairMarketId String? @map("betfair_market_id")
+  marketTotalMatched Decimal? @map("market_total_matched")
+  status         String   @default("scheduled")
+  scrapedAt      DateTime? @map("scraped_at")
+  createdAt      DateTime @default(now()) @map("created_at")
+
+  runners        Runner[]
+  liveOdds       LiveOdds[]
+  qualifyingBets QualifyingBet[]
+
+  @@index([raceDate], map: "idx_races_date")
+  @@map("races")
+}
+
+model Runner {
+  id               Int      @id @default(autoincrement())
+  raceId           String   @map("race_id")
+  horseName        String   @map("horse_name")
+  jockey           String?
+  trainer          String?
+  officialRating   Int?     @map("official_rating")
+  weightStone      Int?     @map("weight_stone")
+  weightLbs        Int?     @map("weight_lbs")
+  weightTotalLbs   Int?     @map("weight_total_lbs")
+  draw             Int?
+  spDecimal        Decimal? @map("sp_decimal")
+  finishPosition   Int?     @map("finish_position")
+  isWinner         Boolean? @map("is_winner")
+  isPlaced         Boolean? @map("is_placed")
+  isFavourite      Boolean? @map("is_favourite")
+  ltoRaceId        String?  @map("lto_race_id")
+  ltoFinishPos     Int?     @map("lto_finish_pos")
+  ltoOr            Int?     @map("lto_or")
+  ltoWasTopRated   Boolean? @map("lto_was_top_rated")
+  ltoDistanceBand  String?  @map("lto_distance_band")
+  ltoSameDistance  Boolean? @map("lto_same_distance")
+  jockeySrPct      Decimal? @map("jockey_sr_pct")
+  jockeyRides      Int?     @map("jockey_rides")
+  qualifies        Boolean  @default(false)
+  disqualifyReason String?  @map("disqualify_reason")
+  createdAt        DateTime @default(now()) @map("created_at")
+
+  race           Race            @relation(fields: [raceId], references: [id])
+  qualifyingBets QualifyingBet[]
+
+  @@index([raceId], map: "idx_runners_race")
+  @@map("runners")
+}
+
+model LiveOdds {
+  id            Int      @id @default(autoincrement())
+  raceId        String   @map("race_id")
+  horseName     String?  @map("horse_name")
+  betfairPrice  Decimal? @map("betfair_price")
+  layPrice      Decimal? @map("lay_price")
+  backSize      Decimal? @map("back_size")
+  laySize       Decimal? @map("lay_size")
+  isFavourite   Boolean? @map("is_favourite")
+  matchedVolume Decimal? @map("matched_volume")
+  morningPrice  Decimal? @map("morning_price")
+  priceDriftPct Decimal? @map("price_drift_pct")
+  fetchedAt     DateTime @default(now()) @map("fetched_at")
+
+  race Race @relation(fields: [raceId], references: [id])
+
+  @@map("live_odds")
+}
+
+model QualifyingBet {
+  id              Int      @id @default(autoincrement())
+  raceId          String   @map("race_id")
+  runnerId        Int?     @map("runner_id")
+  horseName       String   @map("horse_name")
+  raceDate        DateTime @map("race_date")
+  raceTime        DateTime @map("race_time")
+  course          String
+  distanceBand    String?  @map("distance_band")
+  jockey          String?
+  jockeySrPct     Decimal? @map("jockey_sr_pct")
+  morningSp       Decimal? @map("morning_sp")
+  liveSp20min     Decimal? @map("live_sp_20min")
+  finalSp         Decimal? @map("final_sp")
+  jkThreshold     Int?     @map("jk_threshold")
+  stake           Decimal?
+  betPlaced       Boolean  @default(false) @map("bet_placed")
+  finishPosition  Int?     @map("finish_position")
+  won             Boolean?
+  placed          Boolean?
+  pnl             Decimal?
+  resultFetchedAt DateTime? @map("result_fetched_at")
+  status          String   @default("pending")
+  createdAt       DateTime @default(now()) @map("created_at")
+
+  race   Race    @relation(fields: [raceId], references: [id])
+  runner Runner? @relation(fields: [runnerId], references: [id])
+
+  @@index([raceDate], map: "idx_qualifying_bets_date")
+  @@index([status], map: "idx_qualifying_bets_status")
+  @@map("qualifying_bets")
+}
+
+model JockeyStat {
+  id                Int      @id @default(autoincrement())
+  jockey            String
+  seasonYear        Int      @map("season_year")
+  turfHandicapWins  Int      @default(0) @map("turf_handicap_wins")
+  turfHandicapRides Int      @default(0) @map("turf_handicap_rides")
+  strikeRatePct     Decimal? @map("strike_rate_pct")
+  updatedAt         DateTime @default(now()) @updatedAt @map("updated_at")
+
+  @@unique([jockey, seasonYear])
+  @@map("jockey_stats")
+}
+
+model HistoricalRace {
+  id              Int      @id @default(autoincrement())
+  raceExternalId  String?  @map("race_external_id")
+  raceDate        DateTime? @map("race_date")
+  course          String?
+  raceName        String?  @map("race_name")
+  horseName       String?  @map("horse_name")
+  jockey          String?
+  trainer         String?
+  finishPos       Int?     @map("finish_pos")
+  officialRating  Int?     @map("official_rating")
+  weightTotalLbs  Int?     @map("weight_total_lbs")
+  distanceBand    String?  @map("distance_band")
+  spDecimal       Decimal? @map("sp_decimal")
+  fieldSize       Int?     @map("field_size")
+  isHandicap      Boolean? @map("is_handicap")
+  isTurf          Boolean? @map("is_turf")
+  year            Int?
+  qualified       Boolean  @default(false)
+  won             Boolean?
+  placed          Boolean?
+  pnl             Decimal?
+  failedRule      String?  @map("failed_rule")
+
+  @@index([raceDate])
+  @@index([qualified])
+  @@index([year])
+  @@map("historical_races")
+}
+
+model AlgorithmConfig {
+  id        String   @id @default("default")
+  rulesJson String   @map("rules_json")
+  updatedAt DateTime @updatedAt @map("updated_at")
+
+  @@map("algorithm_config")
+}
+
+model AlgorithmConfigHistory {
+  id           String   @id @default(cuid())
+  rulesJson    String   @map("rules_json")
+  description  String?
+  replacedAt   DateTime @default(now()) @map("replaced_at")
+
+  @@index([replacedAt])
+  @@map("algorithm_config_history")
+}
